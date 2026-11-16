@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "node:fs/promises";
-import path from "node:path";
 import crypto from "node:crypto";
 import { requireAuth } from "@/lib/auth";
+import { uploadToZipline, ZiplineError } from "@/lib/zipline";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 Mo
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -67,21 +66,28 @@ export async function POST(req: Request) {
     if (mimeType === "image/webp") ext = "webp";
 
     const fileName = `eq-${crypto.randomUUID().slice(0, 12)}.${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "equipements");
-    await mkdir(uploadDir, { recursive: true });
 
-    const filePath = path.join(uploadDir, fileName);
-    await writeFile(filePath, buffer);
-
-    const publicUrl = `/uploads/equipements/${fileName}`;
+    // ── Upload vers Zipline au lieu du stockage local ──
+    const result = await uploadToZipline(buffer, fileName, mimeType);
 
     return NextResponse.json({
       success: true,
       message: "Photo téléversée avec succès.",
-      photoUrl: publicUrl,
+      photoUrl: result.url,
     });
   } catch (error) {
     console.error("Erreur upload photo équipement:", error);
-    return NextResponse.json({ success: false, message: "Erreur serveur lors du téléversement." }, { status: 500 });
+
+    if (error instanceof ZiplineError) {
+      return NextResponse.json(
+        { success: false, message: `Erreur Zipline : ${error.message}` },
+        { status: error.statusCode >= 500 ? 502 : error.statusCode }
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, message: "Erreur serveur lors du téléversement." },
+      { status: 500 }
+    );
   }
 }

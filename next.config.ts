@@ -2,6 +2,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "zipline.touba-app.com",
+      },
+    ],
+  },
   devIndicators: false,
   compress: true,
   // Limiter à 1 seul worker pour éviter le dépassement de mémoire V8 sous Windows
