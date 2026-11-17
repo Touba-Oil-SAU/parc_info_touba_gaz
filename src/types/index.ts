@@ -25,8 +25,10 @@ export interface Service {
 
 export interface Employe {
   id: string;
+  matricule?: string | null;
   nom: string;
   prenom: string;
+  fonction?: string | null;
   email?: string | null;
   telephone?: string | null;
   service_id?: string | null;

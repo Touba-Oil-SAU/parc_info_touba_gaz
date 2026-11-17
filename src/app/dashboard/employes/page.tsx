@@ -22,6 +22,11 @@ import {
   Share2,
   Calendar,
   CheckCircle2,
+  Briefcase,
+  Hash,
+  Upload,
+  FileSpreadsheet,
+  Check,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,8 +54,11 @@ export default function EmployesPage() {
   // Modal Ajout
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formMatricule, setFormMatricule] = useState("");
   const [formNom, setFormNom] = useState("");
   const [formPrenom, setFormPrenom] = useState("");
+  const [formFonction, setFormFonction] = useState("");
+  const [formStatut, setFormStatut] = useState<"ACTIVE" | "INACTIF">("ACTIVE");
   const [formEmail, setFormEmail] = useState("");
   const [formTelephone, setFormTelephone] = useState("");
   const [formServiceId, setFormServiceId] = useState("");
@@ -60,14 +68,22 @@ export default function EmployesPage() {
 
   // Modal Édition
   const [editingEmp, setEditingEmp] = useState<EmployeWithRole | null>(null);
+  const [editMatricule, setEditMatricule] = useState("");
   const [editNom, setEditNom] = useState("");
   const [editPrenom, setEditPrenom] = useState("");
+  const [editFonction, setEditFonction] = useState("");
+  const [editStatut, setEditStatut] = useState<"ACTIVE" | "INACTIF">("ACTIVE");
   const [editEmail, setEditEmail] = useState("");
   const [editTelephone, setEditTelephone] = useState("");
   const [editServiceId, setEditServiceId] = useState("");
   const [editRole, setEditRole] = useState<"employe" | "admin">("employe");
   const [editNewPassword, setEditNewPassword] = useState("");
   const [isEditingSubmitting, setIsEditingSubmitting] = useState(false);
+
+  // Modal Import CSV
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [csvContent, setCsvContent] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
 
   // Modal Détail Équipements & Fiche Collaborateur (Item 5)
   const [detailEmploye, setDetailEmploye] = useState<any | null>(null);
@@ -141,8 +157,11 @@ export default function EmployesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          matricule: formMatricule,
           nom: formNom,
           prenom: formPrenom,
+          fonction: formFonction,
+          statut: formStatut,
           email: formEmail,
           telephone: formTelephone,
           service_id: formServiceId || null,
@@ -160,8 +179,11 @@ export default function EmployesPage() {
             : `Employé ${formPrenom} ${formNom} enregistré avec succès.`
         );
         setIsModalOpen(false);
+        setFormMatricule("");
         setFormNom("");
         setFormPrenom("");
+        setFormFonction("");
+        setFormStatut("ACTIVE");
         setFormEmail("");
         setFormTelephone("");
         loadData();
@@ -177,8 +199,11 @@ export default function EmployesPage() {
 
   const handleOpenEdit = (emp: EmployeWithRole) => {
     setEditingEmp(emp);
+    setEditMatricule(emp.matricule || "");
     setEditNom(emp.nom);
     setEditPrenom(emp.prenom);
+    setEditFonction(emp.fonction || "");
+    setEditStatut(emp.actif ? "ACTIVE" : "INACTIF");
     setEditEmail(emp.email || "");
     setEditTelephone(emp.telephone || "");
     setEditServiceId(emp.service_id || (services.length > 0 ? services[0].id : ""));
@@ -201,8 +226,11 @@ export default function EmployesPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          matricule: editMatricule,
           nom: editNom,
           prenom: editPrenom,
+          fonction: editFonction,
+          actif: editStatut === "ACTIVE",
           email: editEmail,
           telephone: editTelephone,
           service_id: editServiceId || null,
@@ -223,6 +251,105 @@ export default function EmployesPage() {
       toast.error("Erreur serveur lors de la modification.");
     } finally {
       setIsEditingSubmitting(false);
+    }
+  };
+
+  const handleImportCsv = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!csvContent.trim()) {
+      toast.error("Veuillez coller le contenu CSV.");
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const lines = csvContent.trim().split("\n");
+      if (lines.length < 2) {
+        toast.error("Le texte CSV doit comporter au moins une ligne d'en-tête et une ligne de données.");
+        setIsImporting(false);
+        return;
+      }
+
+      // Découper l'en-tête
+      const headerLine = lines[0].split(",").map((h) => h.trim().toLowerCase());
+      const parsedEmployes: any[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const cols = line.split(",").map((c) => c.trim());
+
+        let nom = "";
+        let email = "";
+        let matricule = "";
+        let statut = "ACTIVE";
+        let telephone = "";
+        let departement = "";
+        let fonction = "";
+        let pwd = "";
+
+        if (headerLine.includes("nom") || headerLine.includes("email")) {
+          headerLine.forEach((header, idx) => {
+            const val = cols[idx] || "";
+            if (header === "nom") nom = val;
+            else if (header === "email") email = val;
+            else if (header === "matricule") matricule = val;
+            else if (header === "statut") statut = val;
+            else if (header.includes("téléphone") || header.includes("telephone")) telephone = val;
+            else if (header.includes("département") || header.includes("departement") || header.includes("service")) departement = val;
+            else if (header === "fonction") fonction = val;
+            else if (header === "pwd" || header.includes("password") || header.includes("mot de passe")) pwd = val;
+          });
+        } else {
+          nom = cols[0] || "";
+          email = cols[1] || "";
+          matricule = cols[2] || "";
+          statut = cols[3] || "ACTIVE";
+          telephone = cols[4] || "";
+          departement = cols[5] || "";
+          fonction = cols[6] || "";
+          pwd = cols[8] || cols[7] || "";
+        }
+
+        if (nom) {
+          parsedEmployes.push({
+            nom,
+            email,
+            matricule,
+            statut,
+            telephone,
+            departement,
+            fonction,
+            pwd: pwd || "ToubaGaz@2026",
+          });
+        }
+      }
+
+      if (parsedEmployes.length === 0) {
+        toast.error("Aucune donnée employé valide n'a été détectée.");
+        setIsImporting(false);
+        return;
+      }
+
+      const res = await fetch("/api/employes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employes: parsedEmployes }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.success(json.message || `${parsedEmployes.length} employé(s) importé(s) !`);
+        setIsImportModalOpen(false);
+        setCsvContent("");
+        loadData();
+      } else {
+        toast.error(json.message || "Erreur lors de l'importation.");
+      }
+    } catch {
+      toast.error("Erreur serveur lors de l'importation CSV.");
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -255,13 +382,23 @@ export default function EmployesPage() {
         description="Personnel, services de rattachement, rôles et dotations du matériel Touba Gaz."
         icon={Users}
       >
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="h-10 gap-2 bg-emerald-600 px-4 text-white hover:bg-emerald-700 font-semibold shadow-xs cursor-pointer"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Ajouter un employé
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsImportModalOpen(true)}
+            className="h-10 gap-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold shadow-xs cursor-pointer"
+          >
+            <Upload className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+            Importer CSV
+          </Button>
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            className="h-10 gap-2 bg-emerald-600 px-4 text-white hover:bg-emerald-700 font-semibold shadow-xs cursor-pointer"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Ajouter un employé
+          </Button>
+        </div>
       </PageHeader>
 
       {/* Barre de filtres unifiée */}
@@ -271,7 +408,7 @@ export default function EmployesPage() {
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <Input
               type="text"
-              placeholder="Rechercher par nom, prénom, e-mail..."
+              placeholder="Rechercher par matricule, nom, prénom, fonction, e-mail..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -306,10 +443,11 @@ export default function EmployesPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold text-xs uppercase tracking-wider">
               <tr>
-                <th className="py-3 px-4">Employé</th>
-                <th className="py-3 px-4">Service</th>
-                <th className="py-3 px-4">E-mail professionnel</th>
-                <th className="py-3 px-4">Téléphone</th>
+                <th className="py-3 px-4">Matricule</th>
+                <th className="py-3 px-4">Employé & Fonction</th>
+                <th className="py-3 px-4">Département</th>
+                <th className="py-3 px-4">Coordonnées</th>
+                <th className="py-3 px-4 text-center">Statut</th>
                 <th className="py-3 px-4 text-center">Rôle & Accès</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -317,14 +455,14 @@ export default function EmployesPage() {
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                  <td colSpan={7} className="py-12 text-center text-slate-500">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-emerald-600 mb-2" />
                     Chargement des employés...
                   </td>
                 </tr>
               ) : employes.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                  <td colSpan={7} className="py-12 text-center text-slate-500">
                     <FileQuestion className="h-8 w-8 mx-auto text-slate-400 mb-2" />
                     Aucun employé trouvé.
                   </td>
@@ -332,13 +470,30 @@ export default function EmployesPage() {
               ) : (
                 employes.map((emp) => (
                   <tr key={emp.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3 px-4 font-mono font-bold text-xs text-emerald-800">
+                      {emp.matricule ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200">
+                          <Hash className="h-3 w-3 text-emerald-600" />
+                          {emp.matricule}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 italic">Non renseigné</span>
+                      )}
+                    </td>
                     <td className="py-3 px-4">
                       <div className="font-semibold text-slate-900">
                         {emp.prenom} {emp.nom}
                       </div>
-                      <div className="text-xs text-slate-400 font-mono">
-                        ID: {emp.id}
-                      </div>
+                      {emp.fonction ? (
+                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                          <Briefcase className="h-3 w-3 text-slate-400 shrink-0" />
+                          <span>{emp.fonction}</span>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-400 font-mono">
+                          ID: {emp.id}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium">
@@ -346,24 +501,31 @@ export default function EmployesPage() {
                         {emp.service_nom || "Non rattaché"}
                       </span>
                     </td>
-                    <td className="py-3 px-4 font-mono text-xs text-slate-700">
-                      {emp.email ? (
-                        <div className="flex items-center gap-1.5">
-                          <Mail className="h-3 w-3 text-slate-400" />
-                          <span>{emp.email}</span>
+                    <td className="py-3 px-4 text-xs">
+                      {emp.email && (
+                        <div className="flex items-center gap-1.5 text-slate-700 font-mono">
+                          <Mail className="h-3 w-3 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[180px]">{emp.email}</span>
                         </div>
-                      ) : (
-                        "—"
                       )}
-                    </td>
-                    <td className="py-3 px-4 text-slate-700">
-                      {emp.telephone ? (
-                        <div className="flex items-center gap-1.5">
-                          <Phone className="h-3 w-3 text-slate-400" />
+                      {emp.telephone && (
+                        <div className="flex items-center gap-1.5 text-slate-500 mt-1">
+                          <Phone className="h-3 w-3 text-slate-400 shrink-0" />
                           <span>{emp.telephone}</span>
                         </div>
+                      )}
+                      {!emp.email && !emp.telephone && "—"}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {emp.actif ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+                          <span className="size-1.5 rounded-full bg-emerald-600"></span>
+                          ACTIVE
+                        </span>
                       ) : (
-                        "—"
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">
+                          INACTIF
+                        </span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -577,6 +739,28 @@ export default function EmployesPage() {
               <CardContent className="space-y-4 pt-5 max-h-[75vh] overflow-y-auto">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Matricule</Label>
+                    <Input
+                      placeholder="ex: 26309"
+                      value={editMatricule}
+                      onChange={(e) => setEditMatricule(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Statut</Label>
+                    <select
+                      value={editStatut}
+                      onChange={(e) => setEditStatut(e.target.value as any)}
+                      className="w-full h-10 rounded-lg bg-white border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-emerald-600 shadow-xs"
+                    >
+                      <option value="ACTIVE">Actif (ACTIVE)</option>
+                      <option value="INACTIF">Inactif (INACTIF)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700">Prénom *</Label>
                     <Input
                       required
@@ -594,19 +778,29 @@ export default function EmployesPage() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-700">Service de rattachement</Label>
-                  <select
-                    value={editServiceId}
-                    onChange={(e) => setEditServiceId(e.target.value)}
-                    className="w-full h-10 rounded-lg bg-white border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-emerald-600 shadow-xs"
-                  >
-                    {services.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nom}
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Fonction / Poste</Label>
+                    <Input
+                      placeholder="ex: Chargée des Ressources Humaines"
+                      value={editFonction}
+                      onChange={(e) => setEditFonction(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Département / Service</Label>
+                    <select
+                      value={editServiceId}
+                      onChange={(e) => setEditServiceId(e.target.value)}
+                      className="w-full h-10 rounded-lg bg-white border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-emerald-600 shadow-xs"
+                    >
+                      {services.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nom}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -719,10 +913,32 @@ export default function EmployesPage() {
               <CardContent className="space-y-4 pt-5 max-h-[75vh] overflow-y-auto">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Matricule</Label>
+                    <Input
+                      placeholder="ex: 26309"
+                      value={formMatricule}
+                      onChange={(e) => setFormMatricule(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Statut</Label>
+                    <select
+                      value={formStatut}
+                      onChange={(e) => setFormStatut(e.target.value as any)}
+                      className="w-full h-10 rounded-lg bg-white border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-emerald-600 shadow-xs"
+                    >
+                      <option value="ACTIVE">Actif (ACTIVE)</option>
+                      <option value="INACTIF">Inactif (INACTIF)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-slate-700">Prénom *</Label>
                     <Input
                       required
-                      placeholder="ex: Moussa"
+                      placeholder="ex: Bineta"
                       value={formPrenom}
                       onChange={(e) => setFormPrenom(e.target.value)}
                     />
@@ -731,26 +947,36 @@ export default function EmployesPage() {
                     <Label className="text-xs font-semibold text-slate-700">Nom *</Label>
                     <Input
                       required
-                      placeholder="ex: Diop"
+                      placeholder="ex: Dieng"
                       value={formNom}
                       onChange={(e) => setFormNom(e.target.value)}
                     />
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-slate-700">Service de rattachement</Label>
-                  <select
-                    value={formServiceId}
-                    onChange={(e) => setFormServiceId(e.target.value)}
-                    className="w-full h-10 rounded-lg bg-white border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-emerald-600 shadow-xs"
-                  >
-                    {services.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nom}
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Fonction / Poste</Label>
+                    <Input
+                      placeholder="ex: Chargée des Ressources Humaines"
+                      value={formFonction}
+                      onChange={(e) => setFormFonction(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Département / Service</Label>
+                    <select
+                      value={formServiceId}
+                      onChange={(e) => setFormServiceId(e.target.value)}
+                      className="w-full h-10 rounded-lg bg-white border border-slate-200 px-3 text-sm text-slate-900 outline-none focus:border-emerald-600 shadow-xs"
+                    >
+                      {services.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nom}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -758,15 +984,15 @@ export default function EmployesPage() {
                     <Label className="text-xs font-semibold text-slate-700">E-mail professionnel</Label>
                     <Input
                       type="email"
-                      placeholder="moussa.diop@toubagaz.sn"
+                      placeholder="bineta.dieng@touba-oil.com"
                       value={formEmail}
                       onChange={(e) => setFormEmail(e.target.value)}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-700">Téléphone pro</Label>
+                    <Label className="text-xs font-semibold text-slate-700">Téléphone</Label>
                     <Input
-                      placeholder="+221 77 000 00 00"
+                      placeholder="221000000"
                       value={formTelephone}
                       onChange={(e) => setFormTelephone(e.target.value)}
                     />
@@ -804,7 +1030,7 @@ export default function EmployesPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-700">Mot de passe temporaire</Label>
+                        <Label className="text-xs font-semibold text-slate-700">Mot de passe temporaire (pwd)</Label>
                         <Input
                           type="text"
                           value={formPassword}
@@ -837,6 +1063,90 @@ export default function EmployesPage() {
                       </>
                     ) : (
                       "Créer l'employé"
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* MODAL IMPORTATION CSV */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+          <Card className="w-full max-w-xl border-slate-200 bg-white text-slate-900 shadow-xl rounded-2xl animate-in fade-in-50 zoom-in-95">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-emerald-600" />
+                  Importer des employés (CSV)
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Collez vos lignes CSV au format : Nom, Email, Matricule, Statut, Téléphone, Département, Fonction, pwd
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsImportModalOpen(false)}
+                className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+
+            <form onSubmit={handleImportCsv}>
+              <CardContent className="space-y-4 pt-5 max-h-[75vh] overflow-y-auto">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-slate-700">Contenu CSV brut</Label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCsvContent(
+                          `Nom,Email,Matricule,Statut,Téléphone,Département,Fonction,,pwd\nBineta Dieng,bineta.dieng@touba-oil.com,26309,ACTIVE,221000000,Direction Ressources Humaines,Chargée des Ressources Humaines,,Dieng@2026\nMariama Bodian,mariama.bodian@touba-oil.com,26372,ACTIVE,221000000,Direction Ressources Humaines,Assistante Ressources Humaines,,Bodian@2026\nMbaye Dieng,archive.tg@touba-oil.com,26340,ACTIVE,221000000,Direction Ressources Humaines,Archiviste,,Dieng2@2026`
+                        )
+                      }
+                      className="text-[11px] text-emerald-700 hover:underline font-medium"
+                    >
+                      Insérer exemple
+                    </button>
+                  </div>
+                  <textarea
+                    rows={8}
+                    required
+                    value={csvContent}
+                    onChange={(e) => setCsvContent(e.target.value)}
+                    placeholder="Nom,Email,Matricule,Statut,Téléphone,Département,Fonction,,pwd&#10;Bineta Dieng,bineta.dieng@touba-oil.com,26309,ACTIVE,221000000,Direction Ressources Humaines,Chargée des Ressources Humaines,,Dieng@2026"
+                    className="w-full rounded-xl border border-slate-200 p-3 font-mono text-xs text-slate-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Les départements inexistants seront automatiquement créés et les comptes d'accès avec mot de passe (pwd) seront configurés.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsImportModalOpen(false)}
+                    className="text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isImporting}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                  >
+                    {isImporting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Importation en cours...
+                      </>
+                    ) : (
+                      "Lancer l'importation"
                     )}
                   </Button>
                 </div>

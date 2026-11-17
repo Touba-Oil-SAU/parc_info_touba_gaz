@@ -66,6 +66,47 @@ async function runMigration() {
       }
     }
 
+    // 3. Colonnes matricule et fonction sur employes
+    console.log("--> Étape 5 : Ajout des colonnes matricule et fonction sur la table employes...");
+    try {
+      await connection.query(`
+        ALTER TABLE \`employes\` ADD COLUMN \`matricule\` VARCHAR(50) NULL AFTER \`id\`;
+      `);
+      console.log("[OK] Colonne matricule ajoutée.");
+    } catch (colErr) {
+      if (colErr.code === "ER_DUP_FIELDNAME") {
+        console.log("[INFO] Colonne matricule déjà présente.");
+      } else {
+        throw colErr;
+      }
+    }
+
+    try {
+      await connection.query(`
+        ALTER TABLE \`employes\` ADD COLUMN \`fonction\` VARCHAR(150) NULL AFTER \`prenom\`;
+      `);
+      console.log("[OK] Colonne fonction ajoutée.");
+    } catch (colErr) {
+      if (colErr.code === "ER_DUP_FIELDNAME") {
+        console.log("[INFO] Colonne fonction déjà présente.");
+      } else {
+        throw colErr;
+      }
+    }
+
+    try {
+      await connection.query(`
+        ALTER TABLE \`employes\` ADD INDEX \`idx_employes_matricule\` (\`matricule\`);
+      `);
+      console.log("[OK] Index idx_employes_matricule ajouté.");
+    } catch (idxErr) {
+      if (idxErr.code === "ER_DUP_KEYNAME") {
+        console.log("[INFO] Index idx_employes_matricule déjà présent.");
+      } else {
+        // Ignorer si index ne peut être créé
+      }
+    }
+
     console.log("\n✅ [SUCCÈS] Migration exécutée avec succès sans aucune perte de données !");
   } catch (error) {
     console.error("\n❌ [ERREUR MIGRATION] :", error.message);

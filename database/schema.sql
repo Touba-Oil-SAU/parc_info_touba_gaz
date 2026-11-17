@@ -46,8 +46,10 @@ CREATE TABLE IF NOT EXISTS `services` (
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `employes` (
   `id` VARCHAR(36) NOT NULL,
+  `matricule` VARCHAR(50) NULL,
   `nom` VARCHAR(100) NOT NULL,
   `prenom` VARCHAR(100) NOT NULL,
+  `fonction` VARCHAR(150) NULL,
   `email` VARCHAR(191) NULL,
   `telephone` VARCHAR(30) NULL,
   `service_id` VARCHAR(36) NULL,
@@ -58,6 +60,7 @@ CREATE TABLE IF NOT EXISTS `employes` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_employes_email` (`email`),
   UNIQUE KEY `idx_employes_user_id` (`user_id`),
+  KEY `idx_employes_matricule` (`matricule`),
   KEY `fk_employes_service` (`service_id`),
   CONSTRAINT `fk_employes_service` FOREIGN KEY (`service_id`)
     REFERENCES `services` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,

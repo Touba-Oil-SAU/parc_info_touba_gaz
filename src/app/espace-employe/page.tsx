@@ -487,9 +487,21 @@ export default function EspaceEmployePage() {
         <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 p-5 sm:p-7 shadow-xs">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 relative z-10">
             <div className="space-y-1.5">
-              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 w-fit">
-                <Building2 className="h-3.5 w-3.5 text-emerald-600" />
-                {employeData?.service_nom || "Touba Gaz SA"}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 w-fit">
+                  <Building2 className="h-3.5 w-3.5 text-emerald-600" />
+                  {employeData?.service_nom || "Touba Gaz SA"}
+                </div>
+                {employeData?.matricule && (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono font-semibold border border-slate-200">
+                    Matricule : #{employeData.matricule}
+                  </span>
+                )}
+                {employeData?.fonction && (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 font-medium border border-sky-200">
+                    {employeData.fonction}
+                  </span>
+                )}
               </div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
                 Bienvenue, {employeData?.prenom || "Collaborateur"} !

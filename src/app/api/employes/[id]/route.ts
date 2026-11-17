@@ -57,7 +57,20 @@ export async function PUT(
 
     const { id } = await params;
     const body = await req.json();
-    const { nom, prenom, email, telephone, service_id, actif, creer_compte, role, password, compte_actif } = body;
+    const {
+      matricule,
+      nom,
+      prenom,
+      fonction,
+      email,
+      telephone,
+      service_id,
+      actif,
+      creer_compte,
+      role,
+      password,
+      compte_actif,
+    } = body;
 
     const connection = await pool.getConnection();
     try {
@@ -129,8 +142,10 @@ export async function PUT(
 
       await connection.query<ResultSetHeader>(
         `UPDATE employes 
-         SET nom = COALESCE(?, nom),
+         SET matricule = COALESCE(?, matricule),
+             nom = COALESCE(?, nom),
              prenom = COALESCE(?, prenom),
+             fonction = COALESCE(?, fonction),
              email = ?,
              telephone = ?,
              service_id = ?,
@@ -138,8 +153,10 @@ export async function PUT(
              user_id = COALESCE(?, user_id)
          WHERE id = ?`,
         [
+          matricule !== undefined ? (matricule ? String(matricule).trim() : null) : null,
           nom?.trim(),
           prenom?.trim(),
+          fonction !== undefined ? (fonction?.trim() || null) : null,
           cleanEmail,
           telephone !== undefined ? (telephone?.trim() || null) : employe.telephone,
           service_id !== undefined ? (service_id || null) : employe.service_id,

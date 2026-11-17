@@ -5,8 +5,31 @@ import crypto from "crypto";
 import { hashPassword, requireAuth } from "@/lib/auth";
 
 
+let columnsEnsured = false;
+async function ensureEmployeColumns() {
+  if (columnsEnsured) return;
+  try {
+    await pool.query("ALTER TABLE `employes` ADD COLUMN `matricule` VARCHAR(50) NULL AFTER `id`;");
+  } catch (err: unknown) {
+    const error = err as { code?: string };
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      // ignore
+    }
+  }
+  try {
+    await pool.query("ALTER TABLE `employes` ADD COLUMN `fonction` VARCHAR(150) NULL AFTER `prenom`;");
+  } catch (err: unknown) {
+    const error = err as { code?: string };
+    if (error.code !== "ER_DUP_FIELDNAME") {
+      // ignore
+    }
+  }
+  columnsEnsured = true;
+}
+
 export async function GET(req: Request) {
   try {
+    await ensureEmployeColumns();
     const authResult = await requireAuth(req, ["admin"]);
     if ("errorResponse" in authResult) {
       return authResult.errorResponse;
@@ -41,9 +64,9 @@ export async function GET(req: Request) {
     }
 
     if (search) {
-      query += ` AND (e.nom LIKE ? OR e.prenom LIKE ? OR e.email LIKE ? OR e.telephone LIKE ?)`;
+      query += ` AND (e.nom LIKE ? OR e.prenom LIKE ? OR e.email LIKE ? OR e.telephone LIKE ? OR e.matricule LIKE ? OR e.fonction LIKE ?)`;
       const s = `%${search}%`;
-      params.push(s, s, s, s);
+      params.push(s, s, s, s, s, s);
     }
 
     query += ` ORDER BY e.nom ASC, e.prenom ASC`;
@@ -58,19 +81,155 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    await ensureEmployeColumns();
     const authResult = await requireAuth(req, ["admin"]);
     if ("errorResponse" in authResult) {
       return authResult.errorResponse;
     }
 
     const body = await req.json();
-    const { nom, prenom, email, telephone, service_id, creer_compte, role, password } = body;
 
-    if (!nom?.trim() || !prenom?.trim()) {
-      return NextResponse.json({ success: false, message: "Nom et prénom sont requis." }, { status: 400 });
+    // Support pour import en masse (tableau d'employés)
+    if (Array.isArray(body?.employes)) {
+      const results = {
+        created: 0,
+        errors: [] as string[],
+      };
+
+      for (const item of body.employes) {
+        try {
+          let prenom = item.prenom?.trim() || "";
+          let nom = item.nom?.trim() || "";
+
+          // Si nom contient le prénom et nom en un seul champ
+          if (!prenom && nom.includes(" ")) {
+            const parts = nom.split(" ");
+            prenom = parts[0];
+            nom = parts.slice(1).join(" ");
+          } else if (!nom && prenom) {
+            nom = prenom;
+            prenom = "";
+          }
+
+          if (!nom) {
+            results.errors.push(`Ligne ignorée : nom manquant (${item.email || "sans email"})`);
+            continue;
+          }
+
+          const cleanEmail = item.email?.trim().toLowerCase() || null;
+          const matricule = item.matricule ? String(item.matricule).trim() : null;
+          const fonction = item.fonction?.trim() || null;
+          const telephone = item.telephone ? String(item.telephone).trim() : null;
+          const statut = item.statut !== undefined 
+            ? (String(item.statut).toUpperCase() === "ACTIVE" || String(item.statut) === "1" || item.statut === true ? 1 : 0)
+            : (item.actif !== undefined ? (item.actif ? 1 : 0) : 1);
+
+          let serviceId = item.service_id || null;
+          // Si département textuel fourni (ex: 'Direction Ressources Humaines')
+          if (!serviceId && item.departement) {
+            const depName = item.departement.trim();
+            const [srvRows] = await pool.query<RowDataPacket[]>(
+              `SELECT id FROM services WHERE LOWER(nom) = LOWER(?) OR LOWER(nom) LIKE LOWER(?) LIMIT 1`,
+              [depName, `%${depName}%`]
+            );
+            if (srvRows.length > 0) {
+              serviceId = srvRows[0].id;
+            } else {
+              // Créer le service automatiquement
+              const newSrvId = `srv-${crypto.randomUUID().slice(0, 8)}`;
+              await pool.query(
+                `INSERT INTO services (id, nom, description, archive) VALUES (?, ?, ?, 0)`,
+                [newSrvId, depName, `Créé automatiquement lors de l'import`]
+              );
+              serviceId = newSrvId;
+            }
+          }
+
+          let userId: string | null = null;
+          const pwd = item.pwd || item.password;
+          if (cleanEmail && pwd && pwd.length >= 4) {
+            const [existingU] = await pool.query<RowDataPacket[]>(
+              `SELECT id FROM utilisateurs WHERE LOWER(email) = ?`,
+              [cleanEmail]
+            );
+            if (existingU.length === 0) {
+              userId = `usr-${crypto.randomUUID().slice(0, 8)}`;
+              const pwdHash = await hashPassword(pwd);
+              await pool.query(
+                `INSERT INTO utilisateurs (id, email, password_hash, nom, prenom, role, actif) VALUES (?, ?, ?, ?, ?, 'employe', ?)`,
+                [userId, cleanEmail, pwdHash, nom, prenom, statut]
+              );
+            } else {
+              userId = existingU[0].id;
+            }
+          }
+
+          const employeId = `emp-${crypto.randomUUID().slice(0, 8)}`;
+          await pool.query(
+            `INSERT INTO employes (id, matricule, nom, prenom, fonction, email, telephone, service_id, actif, user_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [employeId, matricule, nom, prenom, fonction, cleanEmail, telephone, serviceId, statut, userId]
+          );
+
+          results.created++;
+        } catch (itemErr: unknown) {
+          const err = itemErr as { message?: string };
+          results.errors.push(`Erreur sur ${item.nom || item.email} : ${err.message || "Erreur"}`);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `${results.created} employé(s) importé(s) avec succès.`,
+        data: results,
+      });
+    }
+
+    // Création individuelle standard
+    const {
+      matricule,
+      nom,
+      prenom,
+      fonction,
+      email,
+      telephone,
+      service_id,
+      actif,
+      statut,
+      creer_compte,
+      role,
+      password,
+    } = body;
+
+    let cleanPrenom = prenom?.trim() || "";
+    let cleanNom = nom?.trim() || "";
+
+    if (!cleanNom && cleanPrenom.includes(" ")) {
+      const parts = cleanPrenom.split(" ");
+      cleanPrenom = parts[0];
+      cleanNom = parts.slice(1).join(" ");
+    } else if (!cleanPrenom && cleanNom.includes(" ")) {
+      const parts = cleanNom.split(" ");
+      cleanPrenom = parts[0];
+      cleanNom = parts.slice(1).join(" ");
+    }
+
+    if (!cleanNom) {
+      return NextResponse.json({ success: false, message: "Le nom est obligatoire." }, { status: 400 });
     }
 
     const cleanEmail = email?.trim().toLowerCase() || null;
+    const cleanMatricule = matricule ? String(matricule).trim() : null;
+    const cleanFonction = fonction?.trim() || null;
+    const cleanTelephone = telephone ? String(telephone).trim() : null;
+
+    let isActif = 1;
+    if (statut !== undefined) {
+      isActif = String(statut).toUpperCase() === "ACTIVE" || String(statut) === "1" || statut === true ? 1 : 0;
+    } else if (actif !== undefined) {
+      isActif = actif ? 1 : 0;
+    }
+
     let userId: string | null = null;
 
     const connection = await pool.getConnection();
@@ -113,22 +272,25 @@ export async function POST(req: Request) {
 
         await connection.query<ResultSetHeader>(
           `INSERT INTO utilisateurs (id, email, password_hash, nom, prenom, role, actif)
-           VALUES (?, ?, ?, ?, ?, ?, 1)`,
-          [userId, cleanEmail, pwdHash, nom.trim(), prenom.trim(), assignedRole]
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [userId, cleanEmail, pwdHash, cleanNom, cleanPrenom, assignedRole, isActif]
         );
       }
 
       const employeId = `emp-${crypto.randomUUID().slice(0, 8)}`;
       await connection.query<ResultSetHeader>(
-        `INSERT INTO employes (id, nom, prenom, email, telephone, service_id, actif, user_id)
-         VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
+        `INSERT INTO employes (id, matricule, nom, prenom, fonction, email, telephone, service_id, actif, user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           employeId,
-          nom.trim(),
-          prenom.trim(),
+          cleanMatricule,
+          cleanNom,
+          cleanPrenom,
+          cleanFonction,
           cleanEmail,
-          telephone?.trim() || null,
+          cleanTelephone,
           service_id || null,
+          isActif,
           userId,
         ]
       );
@@ -153,7 +315,7 @@ export async function POST(req: Request) {
     console.error("Erreur POST employes:", error);
     const err = error as { code?: string };
     if (err.code === "ER_DUP_ENTRY") {
-      return NextResponse.json({ success: false, message: "Cet e-mail est déjà attribué à un employé." }, { status: 409 });
+      return NextResponse.json({ success: false, message: "Cet e-mail ou ce matricule est déjà attribué." }, { status: 409 });
     }
     return NextResponse.json({ success: false, message: "Erreur serveur lors de la création." }, { status: 500 });
   }
