@@ -46,3 +46,4 @@ next-env.d.ts
 *.sql
 !database/schema.sql
 !database/seed.sql
+package-lock.json

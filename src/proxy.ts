@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const SESSION_COOKIE_NAME = "touba_gaz_session";
-const SESSION_SECRET = process.env.SESSION_SECRET || "touba-gaz-dev-only-secret-do-not-use-in-production-random-98124";
+import { SESSION_SECRET, SESSION_COOKIE_NAME } from "@/lib/session-secret";
 
 interface DecodedSession {
   id: string;

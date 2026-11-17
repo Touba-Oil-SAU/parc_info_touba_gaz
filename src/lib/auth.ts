@@ -4,12 +4,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { RoleUtilisateur } from "@/types";
 
-const SESSION_SECRET =
-  process.env.SESSION_SECRET ||
-  (process.env.NODE_ENV === "production"
-    ? "touba-gaz-prod-secret-fallback-please-set-session-secret-env"
-    : "touba-gaz-dev-only-secret-do-not-use-in-production-random-98124");
-const SESSION_COOKIE_NAME = "touba_gaz_session";
+import { SESSION_SECRET, SESSION_COOKIE_NAME } from "@/lib/session-secret";
 const SESSION_DURATION_SECONDS = 7 * 24 * 3600; // 7 jours
 
 export interface SessionData {
