@@ -24,8 +24,6 @@ import {
   CheckCircle2,
   Briefcase,
   Hash,
-  Upload,
-  FileSpreadsheet,
   Check,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -79,11 +77,6 @@ export default function EmployesPage() {
   const [editRole, setEditRole] = useState<"employe" | "admin">("employe");
   const [editNewPassword, setEditNewPassword] = useState("");
   const [isEditingSubmitting, setIsEditingSubmitting] = useState(false);
-
-  // Modal Import CSV
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [csvContent, setCsvContent] = useState("");
-  const [isImporting, setIsImporting] = useState(false);
 
   // Modal Détail Équipements & Fiche Collaborateur (Item 5)
   const [detailEmploye, setDetailEmploye] = useState<any | null>(null);
@@ -254,105 +247,6 @@ export default function EmployesPage() {
     }
   };
 
-  const handleImportCsv = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!csvContent.trim()) {
-      toast.error("Veuillez coller le contenu CSV.");
-      return;
-    }
-
-    setIsImporting(true);
-    try {
-      const lines = csvContent.trim().split("\n");
-      if (lines.length < 2) {
-        toast.error("Le texte CSV doit comporter au moins une ligne d'en-tête et une ligne de données.");
-        setIsImporting(false);
-        return;
-      }
-
-      // Découper l'en-tête
-      const headerLine = lines[0].split(",").map((h) => h.trim().toLowerCase());
-      const parsedEmployes: any[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        const cols = line.split(",").map((c) => c.trim());
-
-        let nom = "";
-        let email = "";
-        let matricule = "";
-        let statut = "ACTIVE";
-        let telephone = "";
-        let departement = "";
-        let fonction = "";
-        let pwd = "";
-
-        if (headerLine.includes("nom") || headerLine.includes("email")) {
-          headerLine.forEach((header, idx) => {
-            const val = cols[idx] || "";
-            if (header === "nom") nom = val;
-            else if (header === "email") email = val;
-            else if (header === "matricule") matricule = val;
-            else if (header === "statut") statut = val;
-            else if (header.includes("téléphone") || header.includes("telephone")) telephone = val;
-            else if (header.includes("département") || header.includes("departement") || header.includes("service")) departement = val;
-            else if (header === "fonction") fonction = val;
-            else if (header === "pwd" || header.includes("password") || header.includes("mot de passe")) pwd = val;
-          });
-        } else {
-          nom = cols[0] || "";
-          email = cols[1] || "";
-          matricule = cols[2] || "";
-          statut = cols[3] || "ACTIVE";
-          telephone = cols[4] || "";
-          departement = cols[5] || "";
-          fonction = cols[6] || "";
-          pwd = cols[8] || cols[7] || "";
-        }
-
-        if (nom) {
-          parsedEmployes.push({
-            nom,
-            email,
-            matricule,
-            statut,
-            telephone,
-            departement,
-            fonction,
-            pwd: pwd || "ToubaGaz@2026",
-          });
-        }
-      }
-
-      if (parsedEmployes.length === 0) {
-        toast.error("Aucune donnée employé valide n'a été détectée.");
-        setIsImporting(false);
-        return;
-      }
-
-      const res = await fetch("/api/employes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employes: parsedEmployes }),
-      });
-
-      const json = await res.json();
-      if (res.ok && json.success) {
-        toast.success(json.message || `${parsedEmployes.length} employé(s) importé(s) !`);
-        setIsImportModalOpen(false);
-        setCsvContent("");
-        loadData();
-      } else {
-        toast.error(json.message || "Erreur lors de l'importation.");
-      }
-    } catch {
-      toast.error("Erreur serveur lors de l'importation CSV.");
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
   const handleDeactivate = async (emp: EmployeWithRole) => {
     const confirmation = window.confirm(
       `Êtes-vous certain de vouloir désactiver l'employé ${emp.prenom} ${emp.nom} ? Cette action suspend également son compte d'accès.`
@@ -382,23 +276,13 @@ export default function EmployesPage() {
         description="Personnel, services de rattachement, rôles et dotations du matériel Touba Gaz."
         icon={Users}
       >
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setIsImportModalOpen(true)}
-            className="h-10 gap-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold shadow-xs cursor-pointer"
-          >
-            <Upload className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-            Importer CSV
-          </Button>
-          <Button
-            onClick={() => setIsModalOpen(true)}
-            className="h-10 gap-2 bg-emerald-600 px-4 text-white hover:bg-emerald-700 font-semibold shadow-xs cursor-pointer"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Ajouter un employé
-          </Button>
-        </div>
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          className="h-10 gap-2 bg-emerald-600 px-4 text-white hover:bg-emerald-700 font-semibold shadow-xs cursor-pointer"
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Ajouter un employé
+        </Button>
       </PageHeader>
 
       {/* Barre de filtres unifiée */}
@@ -1063,90 +947,6 @@ export default function EmployesPage() {
                       </>
                     ) : (
                       "Créer l'employé"
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </form>
-          </Card>
-        </div>
-      )}
-
-      {/* MODAL IMPORTATION CSV */}
-      {isImportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
-          <Card className="w-full max-w-xl border-slate-200 bg-white text-slate-900 shadow-xl rounded-2xl animate-in fade-in-50 zoom-in-95">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-emerald-600" />
-                  Importer des employés (CSV)
-                </CardTitle>
-                <CardDescription className="text-xs text-slate-500">
-                  Collez vos lignes CSV au format : Nom, Email, Matricule, Statut, Téléphone, Département, Fonction, pwd
-                </CardDescription>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsImportModalOpen(false)}
-                className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-
-            <form onSubmit={handleImportCsv}>
-              <CardContent className="space-y-4 pt-5 max-h-[75vh] overflow-y-auto">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold text-slate-700">Contenu CSV brut</Label>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCsvContent(
-                          `Nom,Email,Matricule,Statut,Téléphone,Département,Fonction,,pwd\nBineta Dieng,bineta.dieng@touba-oil.com,26309,ACTIVE,221000000,Direction Ressources Humaines,Chargée des Ressources Humaines,,Dieng@2026\nMariama Bodian,mariama.bodian@touba-oil.com,26372,ACTIVE,221000000,Direction Ressources Humaines,Assistante Ressources Humaines,,Bodian@2026\nMbaye Dieng,archive.tg@touba-oil.com,26340,ACTIVE,221000000,Direction Ressources Humaines,Archiviste,,Dieng2@2026`
-                        )
-                      }
-                      className="text-[11px] text-emerald-700 hover:underline font-medium"
-                    >
-                      Insérer exemple
-                    </button>
-                  </div>
-                  <textarea
-                    rows={8}
-                    required
-                    value={csvContent}
-                    onChange={(e) => setCsvContent(e.target.value)}
-                    placeholder="Nom,Email,Matricule,Statut,Téléphone,Département,Fonction,,pwd&#10;Bineta Dieng,bineta.dieng@touba-oil.com,26309,ACTIVE,221000000,Direction Ressources Humaines,Chargée des Ressources Humaines,,Dieng@2026"
-                    className="w-full rounded-xl border border-slate-200 p-3 font-mono text-xs text-slate-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-                  />
-                  <p className="text-[11px] text-slate-400">
-                    Les départements inexistants seront automatiquement créés et les comptes d'accès avec mot de passe (pwd) seront configurés.
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setIsImportModalOpen(false)}
-                    className="text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isImporting}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-                  >
-                    {isImporting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Importation en cours...
-                      </>
-                    ) : (
-                      "Lancer l'importation"
                     )}
                   </Button>
                 </div>

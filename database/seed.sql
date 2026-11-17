@@ -9,15 +9,29 @@ UPDATE `employes`
 SET `nom` = 'Diop', `prenom` = 'Mamy', `telephone` = '+221 77 123 45 67'
 WHERE `id` = 'emp-admin-01';
 
--- Autres Employés
-INSERT INTO `employes` (`id`, `nom`, `prenom`, `email`, `telephone`, `service_id`, `actif`, `user_id`)
+-- Services additionnels
+INSERT INTO `services` (`id`, `nom`, `description`, `archive`)
 VALUES
-  ('emp-002', 'Ndiaye', 'Fatou', 'fatou.ndiaye@toubagaz.sn', '+221 77 234 56 78', 'srv-003', 1, NULL),
-  ('emp-003', 'Ba', 'Amadou', 'amadou.ba@toubagaz.sn', '+221 78 345 67 89', 'srv-004', 1, NULL),
-  ('emp-004', 'Fall', 'Awa', 'awa.fall@toubagaz.sn', '+221 76 456 78 90', 'srv-005', 1, NULL),
-  ('emp-005', 'Sène', 'Cheikh', 'cheikh.sene@toubagaz.sn', '+221 77 567 89 01', 'srv-001', 1, NULL),
-  ('emp-006', 'Sow', 'Ibrahima', 'ibrahima.sow@toubagaz.sn', '+221 78 678 90 12', 'srv-004', 1, NULL)
-ON DUPLICATE KEY UPDATE `nom` = VALUES(`nom`), `service_id` = VALUES(`service_id`);
+  ('srv-comm-01', 'Direction Commerciale Marketing', 'Commercial, Marketing et Relations Clients', 0),
+  ('srv-rh-01', 'Direction Ressources Humaines', 'Gestion des ressources humaines, paie et carrières', 0)
+ON DUPLICATE KEY UPDATE `nom` = VALUES(`nom`);
+
+-- Employés Touba Gaz
+INSERT INTO `employes` (`id`, `matricule`, `nom`, `prenom`, `fonction`, `email`, `telephone`, `service_id`, `actif`, `user_id`)
+VALUES
+  ('emp-26298', '26298', 'Samb', 'Al Assane', 'Inspecteur Commercial', 'alassane.samb@touba-oil.com', '123456789', 'srv-comm-01', 1, NULL),
+  ('emp-26337', '26337', 'Sissokho', 'Amath', 'Inspecteur Commercial', 'amath.sissokho@touba-oil.com', '775571826', 'srv-comm-01', 1, NULL),
+  ('emp-26284', '26284', 'Niang', 'Arame', 'Agent Commercial', 'arame.niang@touba-oil.com', '776407616', 'srv-comm-01', 1, NULL),
+  ('emp-26273', '26273', 'Ndione', 'Babacar', 'Responsable Commercial', 'babacar.ndione@touba-oil.com', '766451576', 'srv-comm-01', 1, NULL),
+  ('emp-25122', '25122', 'Coulibaly', 'Caty', 'Directrice Commerciale & Marketing', 'mme.coulibaly@touba-oil.com', '338798716', 'srv-comm-01', 1, NULL),
+  ('emp-26347', '26347', 'Ndiaye', 'Cheikh Tidiane', 'Agent Commercial', 'cheikhtidiane.ndiaye@touba-oil.com', '000000000', 'srv-comm-01', 1, NULL),
+  ('emp-26350', '26350', 'Bodiang', 'Cheikhou', 'Assistant Administratif des Ventes', 'cheikhou.bodiang@touba-oil.com', '+221766390974', 'srv-comm-01', 1, NULL),
+  ('emp-26300', '26300', 'Diouf', 'Mamadou', 'Responsable Administrative des Ventes', 'mamadou.diouf@touba-oil.com', '774376957', 'srv-comm-01', 1, NULL),
+  ('emp-26343', '26343', 'Sambe', 'Thiaba', 'Agent Commercial', 'thiaba.sambe@touba-oil.com', '000000000', 'srv-comm-01', 1, NULL),
+  ('emp-26309', '26309', 'Dieng', 'Bineta', 'Chargée des Ressources Humaines', 'bineta.dieng@touba-oil.com', '221000000', 'srv-rh-01', 1, NULL),
+  ('emp-26372', '26372', 'Bodian', 'Mariama', 'Assistante Ressources Humaines', 'mariama.bodian@touba-oil.com', '221000000', 'srv-rh-01', 1, NULL),
+  ('emp-26340', '26340', 'Dieng', 'Mbaye', 'Archiviste', 'archive.tg@touba-oil.com', '221000000', 'srv-rh-01', 1, NULL)
+ON DUPLICATE KEY UPDATE `matricule` = VALUES(`matricule`), `fonction` = VALUES(`fonction`), `telephone` = VALUES(`telephone`);
 
 -- Tickets
 INSERT INTO `tickets` (`id`, `demandeur_id`, `service_id`, `description`, `categorie`, `priorite`, `canal`, `equipement_id`, `statut`, `date_resolution`, `cree_par`)
