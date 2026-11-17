@@ -21,7 +21,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   webpack: (config) => {
-    config.cache = false;
     return config;
   },
   async headers() {
