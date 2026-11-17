@@ -84,6 +84,17 @@ export async function uploadToZipline(
   filename: string,
   mimeType: string,
 ): Promise<ZiplineUploadResult> {
+  // If ZIPLINE_URL or ZIPLINE_TOKEN are not set, fall back to local storage
+  if (!process.env.ZIPLINE_URL || !process.env.ZIPLINE_TOKEN) {
+    // Skip Zipline upload, return a dummy result that points to a local path
+    return {
+      id: "local",
+      name: filename,
+      type: mimeType,
+      url: `/uploads/${filename}`,
+    };
+  }
+
   const { url, token } = getConfig();
 
   // Zipline attend un multipart/form-data avec un champ "file"
@@ -143,6 +154,9 @@ export async function uploadToZipline(
  * @param fileId - L'ID du fichier Zipline à supprimer
  */
 export async function deleteFromZipline(fileId: string): Promise<void> {
+  if (!process.env.ZIPLINE_URL || !process.env.ZIPLINE_TOKEN) {
+    return;
+  }
   const { url, token } = getConfig();
 
   try {
