@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Building2,
-  ChevronRight,
   Flame,
   LayoutDashboard,
   Laptop,
@@ -116,7 +115,7 @@ export function AppSidebar({
           isExpanded ? "w-64" : "w-16"
         }`}
       >
-        {/* En-tête : Logo Touba Gaz + Bouton chevron toggle */}
+        {/* En-tête : Logo Touba Gaz */}
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-3">
           <Link
             href="/dashboard"
@@ -147,17 +146,6 @@ export function AppSidebar({
               </div>
             )}
           </Link>
-
-          {isExpanded && (
-            <button
-              type="button"
-              onClick={onToggleExpand}
-              className="flex size-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-              title="Réduire le menu"
-            >
-              <ChevronRight className="size-4 rotate-180 transition-transform" />
-            </button>
-          )}
         </div>
 
         {/* Corps de navigation : Menu avec infobulles au survol */}

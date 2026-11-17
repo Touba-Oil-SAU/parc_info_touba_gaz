@@ -206,14 +206,6 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-
-            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-xs leading-5 text-slate-600">
-              <span className="font-semibold text-slate-800">Comptes de démonstration :</span>
-              <ul className="mt-1 space-y-0.5 text-slate-600">
-                <li>• Admin IT : <code className="text-slate-800 font-medium">admin@toubagaz.sn</code></li>
-                <li>• Collaborateur : <code className="text-slate-800 font-medium">abisene@toubagaz.sn</code></li>
-              </ul>
-            </div>
           </section>
         </div>
       </div>

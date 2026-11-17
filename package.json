@@ -11,7 +11,8 @@
     "migrate": "node scripts/migrate.js",
     "db:sync": "node scripts/sync_db.js --pull",
     "db:pull": "node scripts/sync_db.js --pull",
-    "db:push": "node scripts/sync_db.js --push"
+    "db:push": "node scripts/sync_db.js --push",
+    "db:clear-equipements": "node scripts/clear-equipements.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
