@@ -128,7 +128,8 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    let { type, marque, modele, numero_serie, date_achat, etat, localisation, description, photo } = body;
+    let { type, marque, modele, numero_serie, date_achat, etat, localisation, description, photo, adresse_ip, ip } = body;
+    const ipValue = (adresse_ip ?? ip)?.trim() || null;
 
     if (!type || !type.trim()) {
       return NextResponse.json({ success: false, message: "Le type est obligatoire." }, { status: 400 });
@@ -140,8 +141,8 @@ export async function POST(req: Request) {
 
     const id = `eq-${crypto.randomUUID().slice(0, 8)}`;
     await pool.query<ResultSetHeader>(
-      `INSERT INTO equipements (id, type, marque, modele, numero_serie, date_achat, etat, localisation, description, photo, archive)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      `INSERT INTO equipements (id, type, marque, modele, numero_serie, date_achat, etat, localisation, adresse_ip, description, photo, archive)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
       [
         id,
         type.trim(),
@@ -151,6 +152,7 @@ export async function POST(req: Request) {
         date_achat || null,
         etat || "en_service",
         localisation?.trim() || null,
+        ipValue,
         description?.trim() || null,
         photo?.trim() || null,
       ]

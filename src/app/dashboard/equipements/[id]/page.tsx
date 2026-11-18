@@ -93,6 +93,7 @@ export default function EquipementDetailPage({
   const [marque, setMarque] = useState("");
   const [modele, setModele] = useState("");
   const [numeroSerie, setNumeroSerie] = useState("");
+  const [adresseIp, setAdresseIp] = useState("");
   const [dateAchat, setDateAchat] = useState("");
   const [etat, setEtat] = useState<EtatEquipement>("en_service");
   const [localisation, setLocalisation] = useState("");
@@ -131,6 +132,7 @@ export default function EquipementDetailPage({
         setMarque(eq.marque || "");
         setModele(eq.modele || "");
         setNumeroSerie(eq.numero_serie || "");
+        setAdresseIp(eq.adresse_ip || "");
         setDateAchat(eq.date_achat ? eq.date_achat.slice(0, 10) : "");
         setEtat((eq.etat as any) === "reforme" ? "hors_service" : (eq.etat || "en_service"));
         setLocalisation(eq.localisation || "");
@@ -358,6 +360,7 @@ export default function EquipementDetailPage({
           marque,
           modele,
           numero_serie: numeroSerie,
+          adresse_ip: adresseIp.trim() || null,
           date_achat: dateAchat || null,
           etat,
           localisation,
@@ -424,7 +427,7 @@ export default function EquipementDetailPage({
 
       <PageHeader
         title={`Fiche équipement · ${formatCodeEquipement(data.code)}`}
-        description={`${data.type} ${data.marque ? "— " + data.marque : ""} ${data.modele || ""}`}
+        description={`${data.type} ${data.marque ? "— " + data.marque : ""} ${data.modele || ""}${data.adresse_ip ? " · IP: " + data.adresse_ip : ""}`}
         icon={Laptop}
       >
         <div className="flex items-center gap-2">
@@ -564,6 +567,16 @@ export default function EquipementDetailPage({
                       value={numeroSerie}
                       onChange={(e) => setNumeroSerie(e.target.value)}
                       placeholder="ex: SN-DELL-88219"
+                      className="font-mono text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-slate-700">Adresse IP</Label>
+                    <Input
+                      value={adresseIp}
+                      onChange={(e) => setAdresseIp(e.target.value)}
+                      placeholder="ex: 192.168.1.50"
                       className="font-mono text-xs"
                     />
                   </div>

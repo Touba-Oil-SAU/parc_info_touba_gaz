@@ -54,6 +54,7 @@ export default function EquipementsPage() {
   const [formMarque, setFormMarque] = useState("");
   const [formModele, setFormModele] = useState("");
   const [formNumSerie, setFormNumSerie] = useState("");
+  const [formIp, setFormIp] = useState("");
   const [formDateAchat, setFormDateAchat] = useState("");
   const [formEtat, setFormEtat] = useState<EtatEquipement>("en_service");
   const [formLocalisation, setFormLocalisation] = useState("");
@@ -68,6 +69,7 @@ export default function EquipementsPage() {
   const [editMarque, setEditMarque] = useState("");
   const [editModele, setEditModele] = useState("");
   const [editNumSerie, setEditNumSerie] = useState("");
+  const [editIp, setEditIp] = useState("");
   const [editDateAchat, setEditDateAchat] = useState("");
   const [editEtat, setEditEtat] = useState<EtatEquipement>("en_service");
   const [editLocalisation, setEditLocalisation] = useState("");
@@ -230,6 +232,7 @@ export default function EquipementsPage() {
           marque: formMarque,
           modele: formModele,
           numero_serie: formNumSerie,
+          adresse_ip: formIp.trim() || null,
           date_achat: formDateAchat || null,
           etat: formEtat,
           localisation: formLocalisation,
@@ -246,6 +249,7 @@ export default function EquipementsPage() {
         setFormMarque("");
         setFormModele("");
         setFormNumSerie("");
+        setFormIp("");
         setFormDateAchat("");
         setFormLocalisation("");
         setFormDescription("");
@@ -268,6 +272,7 @@ export default function EquipementsPage() {
     setEditMarque(eq.marque || "");
     setEditModele(eq.modele || "");
     setEditNumSerie(eq.numero_serie || "");
+    setEditIp(eq.adresse_ip || "");
     setEditDateAchat(eq.date_achat ? eq.date_achat.slice(0, 10) : "");
     setEditEtat((eq.etat as any) === "reforme" ? "hors_service" : (eq.etat || "en_service"));
     setEditLocalisation(eq.localisation || "");
@@ -297,6 +302,7 @@ export default function EquipementsPage() {
           marque: editMarque,
           modele: editModele,
           numero_serie: editNumSerie,
+          adresse_ip: editIp.trim() || null,
           date_achat: editDateAchat || null,
           etat: editEtat,
           localisation: editLocalisation,
@@ -668,6 +674,12 @@ export default function EquipementsPage() {
                         <div className="text-xs text-slate-500">
                           {eq.marque} {eq.modele ? `· ${eq.modele}` : ""}
                         </div>
+                        {eq.adresse_ip && (
+                          <div className="text-[11px] font-mono text-emerald-700 font-medium mt-0.5 inline-flex items-center gap-1 bg-emerald-50/80 px-1.5 py-0.5 rounded border border-emerald-100">
+                            <span className="size-1.5 rounded-full bg-emerald-500" />
+                            IP : {eq.adresse_ip}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-4 font-mono text-xs text-slate-600 whitespace-nowrap">
                         {eq.numero_serie || "—"}
@@ -852,6 +864,16 @@ export default function EquipementsPage() {
                 </div>
 
                 <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-700">Adresse IP</Label>
+                  <Input
+                    placeholder="ex: 192.168.1.50"
+                    value={formIp}
+                    onChange={(e) => setFormIp(e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-slate-700">Date d'achat</Label>
                   <Input
                     type="date"
@@ -1026,6 +1048,16 @@ export default function EquipementsPage() {
                   <Input
                     value={editNumSerie}
                     onChange={(e) => setEditNumSerie(e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-slate-700">Adresse IP</Label>
+                  <Input
+                    placeholder="ex: 192.168.1.50"
+                    value={editIp}
+                    onChange={(e) => setEditIp(e.target.value)}
                     className="font-mono text-xs"
                   />
                 </div>

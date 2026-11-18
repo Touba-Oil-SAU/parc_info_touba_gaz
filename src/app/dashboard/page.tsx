@@ -1,5 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import {
   AlertTriangle,
   ArrowRight,

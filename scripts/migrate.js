@@ -107,6 +107,34 @@ async function runMigration() {
       }
     }
 
+    // 4. Colonne adresse_ip et photo sur equipements
+    console.log("--> Étape 6 : Vérification des colonnes adresse_ip et photo sur equipements...");
+    try {
+      await connection.query(`
+        ALTER TABLE \`equipements\` ADD COLUMN \`adresse_ip\` VARCHAR(45) NULL AFTER \`localisation\`;
+      `);
+      console.log("[OK] Colonne adresse_ip ajoutée.");
+    } catch (colErr) {
+      if (colErr.code === "ER_DUP_FIELDNAME") {
+        console.log("[INFO] Colonne adresse_ip déjà présente.");
+      } else {
+        throw colErr;
+      }
+    }
+
+    try {
+      await connection.query(`
+        ALTER TABLE \`equipements\` ADD COLUMN \`photo\` VARCHAR(255) NULL AFTER \`description\`;
+      `);
+      console.log("[OK] Colonne photo ajoutée.");
+    } catch (colErr) {
+      if (colErr.code === "ER_DUP_FIELDNAME") {
+        console.log("[INFO] Colonne photo déjà présente.");
+      } else {
+        throw colErr;
+      }
+    }
+
     console.log("\n✅ [SUCCÈS] Migration exécutée avec succès sans aucune perte de données !");
   } catch (error) {
     console.error("\n❌ [ERREUR MIGRATION] :", error.message);

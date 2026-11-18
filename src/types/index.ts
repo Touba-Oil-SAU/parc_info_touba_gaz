@@ -46,6 +46,7 @@ export interface Equipement {
   marque?: string | null;
   modele?: string | null;
   numero_serie?: string | null;
+  adresse_ip?: string | null;
   date_achat?: string | null;
   etat: EtatEquipement;
   localisation?: string | null;

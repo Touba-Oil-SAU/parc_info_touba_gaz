@@ -102,11 +102,14 @@ export async function PUT(
 
     const { id } = await params;
     const body = await req.json();
-    let { type, marque, modele, numero_serie, date_achat, etat, localisation, description, photo, archive } = body;
+    let { type, marque, modele, numero_serie, date_achat, etat, localisation, description, photo, archive, adresse_ip, ip } = body;
 
     if (etat === "reforme") {
       etat = "hors_service";
     }
+
+    const hasIp = adresse_ip !== undefined || ip !== undefined;
+    const resolvedIp = hasIp ? ((adresse_ip ?? ip)?.trim() || null) : null;
 
     await pool.query<ResultSetHeader>(
       `UPDATE equipements 
@@ -117,6 +120,7 @@ export async function PUT(
            date_achat = COALESCE(?, date_achat),
            etat = COALESCE(?, etat),
            localisation = COALESCE(?, localisation),
+           adresse_ip = CASE WHEN ? = 1 THEN ? ELSE adresse_ip END,
            description = COALESCE(?, description),
            photo = CASE WHEN ? = 1 THEN ? ELSE photo END,
            archive = COALESCE(?, archive)
@@ -129,6 +133,8 @@ export async function PUT(
         date_achat !== undefined ? (date_achat || null) : null,
         etat !== undefined ? etat : null,
         localisation !== undefined ? (localisation?.trim() || null) : null,
+        hasIp ? 1 : 0,
+        resolvedIp,
         description !== undefined ? (description?.trim() || null) : null,
         photo !== undefined ? 1 : 0,
         photo !== undefined ? (photo?.trim() || null) : null,
